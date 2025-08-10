@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مجموعة طبول افتراضية | Virtual Drum Kit</title>
+  <style>
+    :root{
+      --bg:#0b0f14;         /* خلفية أساسية */
+      --panel:#121822;      /* لوحات */
+      --panel-2:#0e1420;    
+      --text:#e8f1ff;       /* نص */
+      --muted:#9bb0cc;      
+      --acc:#5eead4;        /* أكوا */
+      --acc-2:#a78bfa;      /* بنفسجي */
+      --danger:#ff6b6b;
+      --ok:#4ade80;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Kufi Arabic", Tahoma, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 10% 0%, #0f1730 0%, #0b0f14 50%, #070a0f 100%);
+      color:var(--text);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+
+    .app{width:min(1200px, 100%);}
+
+    .header{
+      display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      margin-bottom:18px;
+    }
+    .brand{display:flex; align-items:center; gap:12px}
+    .logo{
+      width:44px; height:44px; border-radius:12px; background:
+        conic-gradient(from 210deg, var(--acc), var(--acc-2), #60a5fa, var(--acc));
+      box-shadow:0 6px 18px rgba(96,165,250,.35);
+      position:relative; isolation:isolate;
+    }
+    .logo::after{content:""; position:absolute; inset:3px; border-radius:10px; background:rgba(0,0,0,.35)}
+    .title{font-size:clamp(18px, 3vw, 28px); font-weight:800; letter-spacing:.3px}
+    .subtitle{color:var(--muted); font-size:14px}
+
+    .panel{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)) , var(--panel);
+      border:1px solid rgba(255,255,255,.06); border-radius:var(--radius); box-shadow:var(--shadow);
+    }
+
+    .controls{
+      display:grid; grid-template-columns: repeat(12, 1fr); gap:12px; padding:14px; align-items:center;
+    }
+    .controls .group{grid-column: span 6; background:var(--panel-2); border-radius:14px; padding:10px 12px; border:1px solid rgba(255,255,255,.06)}
+    .controls .group.small{grid-column: span 3}
+    .controls .group.flex{display:flex; align-items:center; gap:10px; justify-content:space-between}
+
+    .kbd {background:#0b1320; border:1px solid rgba(255,255,255,.08); padding:2px 8px; border-radius:10px; font-weight:700}
+
+    .btn{
+      appearance:none; border:none; cursor:pointer; padding:12px 14px; border-radius:14px; font-weight:800;
+      color:#051018; background:linear-gradient(180deg, #a7f3d0, #5eead4); box-shadow:0 8px 20px rgba(94,234,212,.3);
+      transition: transform .06s ease, box-shadow .12s ease, filter .18s ease;
+    }
+    .btn:hover{filter:saturate(1.1)}
+    .btn:active{transform:translateY(1px)}
+    .btn.alt{background:linear-gradient(180deg, #c7b8ff, #a78bfa); color:#0b0615; box-shadow:0 8px 20px rgba(167,139,250,.28)}
+    .btn.ghost{background:transparent; color:var(--text); border:1px dashed rgba(255,255,255,.18); box-shadow:none}
+    .btn.danger{background:linear-gradient(180deg, #ffb3b3, #ff6b6b); color:#240909; box-shadow:0 8px 20px rgba(255,107,107,.25)}
+
+    .status{display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted)}
+    .dot{width:9px; height:9px; border-radius:50%; background:var(--muted); box-shadow:0 0 0 0 rgba(94,234,212,0);}
+    .dot.live{ background:var(--acc); box-shadow:0 0 0 6px rgba(94,234,212,.12); animation:pulse 1.2s infinite linear }
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(94,234,212,.3)}100%{box-shadow:0 0 0 12px rgba(94,234,212,0)}}
+
+    /* Pads grid */
+    .grid{display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:14px; padding:16px}
+
+    .pad{
+      position:relative; isolation:isolate; background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0)), #0c1320;
+      border:1px solid rgba(255,255,255,.06); border-radius:20px; padding:18px; min-height:120px; overflow:hidden;
+      display:flex; flex-direction:column; justify-content:space-between; 
+      box-shadow: inset 0 -20px 40px rgba(0,0,0,.25), var(--shadow);
+      transition: transform .06s ease, filter .18s ease, box-shadow .18s ease;
+      user-select:none; -webkit-user-select:none; touch-action:manipulation;
+    }
+    .pad:hover{filter:saturate(1.05)}
+    .pad:active{transform: translateY(1px) scale(.995)}
+    .pad .label{font-weight:800; font-size:18px}
+    .pad .key{position:absolute; top:12px; left:12px; font-size:13px; color:var(--muted); background:#0a1220; border:1px solid rgba(255,255,255,.07); padding:3px 7px; border-radius:10px}
+    .pad .type{font-size:12px; color:var(--muted)}
+    .glow{position:absolute; inset:-40%; background: radial-gradient(450px 250px at 70% -10%, rgba(94,234,212,.18), transparent 60%), radial-gradient(300px 200px at -10% 110%, rgba(167,139,250,.22), transparent 50%); filter: blur(30px); z-index:-1}
+
+    .pad.active{box-shadow: inset 0 -10px 40px rgba(94,234,212,.25), 0 10px 30px rgba(94,234,212,.2)}
+    .meter{height:6px; border-radius:6px; overflow:hidden; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08)}
+    .meter > span{display:block; height:100%; width:0%; background:linear-gradient(90deg, var(--acc), var(--acc-2)); transition:width .12s ease}
+
+    .footer{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; color:var(--muted); font-size:14px}
+
+    .map{display:flex; gap:8px; flex-wrap:wrap}
+    .chip{background:#0a1220; border:1px solid rgba(255,255,255,.08); padding:6px 10px; border-radius:999px; font-size:12px}
+
+    .sliders{display:flex; gap:16px; align-items:center}
+    .sliders label{font-size:12px; color:var(--muted)}
+    input[type=range]{width:160px}
+    input[type=range]::-webkit-slider-thumb{appearance:none; width:16px; height:16px; border-radius:50%; background:linear-gradient(180deg,#fff,#cbd5e1); border:1px solid #94a3b8}
+    input[type=range]::-webkit-slider-runnable-track{height:6px; border-radius:6px; background:linear-gradient(90deg, #334155, #0ea5e9)}
+
+    @media (max-width: 900px){
+      .controls .group{grid-column: span 12}
+      .grid{grid-template-columns: repeat(2, minmax(0,1fr))}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title">مجموعة طبول افتراضية — Virtual Drum Kit</div>
+          <div class="subtitle">انقر/المس الوسادات أو استخدم لوحة المفاتيح. سجّل عزفك وأعد تشغيله.</div>
+        </div>
+      </div>
+      <div class="status"><span class="dot" id="liveDot"></span><span id="statusText">جاهز</span></div>
+    </div>
+
+    <div class="panel controls" role="region" aria-label="لوحة التحكم">
+      <div class="group flex">
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn" id="btnRecord" title="بدء التسجيل (R)">● تسجيل</button>
+          <button class="btn alt" id="btnPlay" title="تشغيل التسجيل (Space)">▶ تشغيل</button>
+          <button class="btn ghost" id="btnStop" title="إيقاف التشغيل/التسجيل (Esc)">■ إيقاف</button>
+          <button class="btn danger" id="btnClear" title="مسح الأحداث">مسح</button>
+        </div>
+        <div class="sliders">
+          <label>الحجم <input id="volume" type="range" min="0" max="1" step="0.01" value="0.9"></label>
+          <label>سرعة التشغيل <input id="speed" type="range" min="0.5" max="1.5" step="0.05" value="1"></label>
+        </div>
+      </div>
+
+      <div class="group small" style="display:flex; align-items:center; justify-content:space-between">
+        <div>
+          <div style="font-weight:700">عدد النقرات</div>
+          <div id="hitCount" class="subtitle">0</div>
+        </div>
+        <div>
+          <div style="font-weight:700">مدة التسجيل</div>
+          <div id="recDuration" class="subtitle">0.00s</div>
+        </div>
+      </div>
+
+      <div class="group" style="grid-column: span 12">
+        <div style="font-weight:700; margin-bottom:8px">اختصارات لوحة المفاتيح</div>
+        <div class="map" id="keyMap"></div>
+      </div>
+    </div>
+
+    <div class="panel grid" id="padGrid" role="list" aria-label="وسادات الطبول"></div>
+
+    <div class="footer">
+      <div>⌨️ استخدم المفاتيح، 🖱️ أو انقر/المس. يُفضَّل تفعيل الصوت بالنقرة الأولى.</div>
+      <div>صُمِّم بعناية — يعمل بالكامل دون ملفات خارجية.</div>
+    </div>
+  </div>
+
+  <script>
+    // --- Utility helpers ---
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+
+    // --- Audio Engine (WebAudio, no external samples) ---
+    class DrumSynth {
+      constructor(){
+        this.ctx = null;           // created on first user gesture
+        this.master = null;        // master gain
+        this.comp = null;          // gentle compressor
+        this.currentVolume = 0.9;
+      }
+      ensure(){
+        if(this.ctx) return;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const master = ctx.createGain();
+        master.gain.value = this.currentVolume;
+
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -14;
+        comp.ratio.value = 3;
+        comp.attack.value = 0.003;
+        comp.release.value = 0.15;
+
+        master.connect(comp);
+        comp.connect(ctx.destination);
+
+        this.ctx = ctx; this.master = master; this.comp = comp;
+      }
+      setVolume(v){ this.ensure(); this.master.gain.linearRampToValueAtTime(v, this.ctx.currentTime + 0.02); }
+
+      // Kick: short sine with pitch drop & click
+      kick(){
+        this.ensure(); const t0 = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140, t0);
+        osc.frequency.exponentialRampToValueAtTime(40, t0 + 0.25);
+        gain.gain.setValueAtTime(1, t0);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+
+        // click
+        const click = this.ctx.createGain();
+        const noise = this.noiseBuffer();
+        const ns = this.ctx.createBufferSource(); ns.buffer = noise;
+        const hp = this.ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value = 1200;
+        click.gain.setValueAtTime(0.6, t0); click.gain.exponentialRampToValueAtTime(0.0001, t0+0.03);
+
+        osc.connect(gain).connect(this.master);
+        ns.connect(hp).connect(click).connect(this.master);
+        osc.start(t0); osc.stop(t0 + 0.4);
+        ns.start(t0); ns.stop(t0 + 0.05);
+      }
+
+      // Snare: noise burst + tone
+      snare(){
+        this.ensure(); const t0 = this.ctx.currentTime;
+        const noise = this.noiseBuffer();
+        const src = this.ctx.createBufferSource(); src.buffer = noise;
+        const bp = this.ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=0.6;
+        const gainN = this.ctx.createGain(); gainN.gain.setValueAtTime(0.9, t0); gainN.gain.exponentialRampToValueAtTime(0.0001, t0+0.18);
+        src.connect(bp).connect(gainN).connect(this.master);
+
+        const osc = this.ctx.createOscillator(); osc.type='triangle'; osc.frequency.setValueAtTime(220, t0);
+        const gainT = this.ctx.createGain(); gainT.gain.setValueAtTime(0.3, t0); gainT.gain.exponentialRampToValueAtTime(0.0001, t0+0.12);
+        osc.connect(gainT).connect(this.master);
+
+        src.start(t0); src.stop(t0+0.2); osc.start(t0); osc.stop(t0+0.15);
+      }
+
+      // Hi-hat closed: filtered noise, fast decay
+      hatClosed(){
+        this.ensure(); const t0 = this.ctx.currentTime;
+        const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuffer();
+        const hp = this.ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=5000;
+        const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.6, t0); gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.06);
+        src.connect(hp).connect(gain).connect(this.master); src.start(t0); src.stop(t0+0.07);
+      }
+
+      // Hi-hat open: longer noise, slight bandpass
+      hatOpen(){
+        this.ensure(); const t0 = this.ctx.currentTime;
+        const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuffer();
+        const bp = this.ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=8000; bp.Q.value=0.8;
+        const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.5, t0); gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.35);
+        src.connect(bp).connect(gain).connect(this.master); src.start(t0); src.stop(t0+0.4);
+      }
+
+      // Tom: tuned sine with soft transient
+      tom(freq=140){
+        this.ensure(); const t0 = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator(); osc.type='sine'; osc.frequency.setValueAtTime(freq, t0);
+        const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.9, t0); gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.28);
+        osc.connect(gain).connect(this.master); osc.start(t0); osc.stop(t0+0.3);
+      }
+
+      // Clap: multi-burst noise
+      clap(){
+        this.ensure(); const t0 = this.ctx.currentTime;
+        const schedule = [0, 0.02, 0.04];
+        schedule.forEach((ofs,i)=>{
+          const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuffer();
+          const hp = this.ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1500;
+          const gain = this.ctx.createGain();
+          const start = t0 + ofs;
+          const base = 0.6 - i*0.1;
+          gain.gain.setValueAtTime(base, start);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+          src.connect(hp).connect(gain).connect(this.master);
+          src.start(start); src.stop(start + 0.2);
+        });
+      }
+
+      // Rim: short click
+      rim(){
+        this.ensure(); const t0 = this.ctx.currentTime;
+        const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuffer();
+        const bp = this.ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2500; bp.Q.value=1.2;
+        const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.5, t0); gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.04);
+        src.connect(bp).connect(gain).connect(this.master); src.start(t0); src.stop(t0+0.06);
+      }
+
+      // Cowbell: two square partials
+      cowbell(){
+        this.ensure(); const t0 = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator(); osc1.type='square'; osc1.frequency.setValueAtTime(540, t0);
+        const osc2 = this.ctx.createOscillator(); osc2.type='square'; osc2.frequency.setValueAtTime(800, t0);
+        const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.2, t0); gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.22);
+        osc1.connect(gain); osc2.connect(gain); gain.connect(this.master);
+        osc1.start(t0); osc2.start(t0); osc1.stop(t0+0.25); osc2.stop(t0+0.25);
+      }
+
+      noiseBuffer(){
+        // create and cache a mono noise buffer
+        if(this._noise) return this._noise;
+        const len = 1 * 44100; // 1 sec
+        this.ensure();
+        const buf = this.ctx.createBuffer(1, len, 44100);
+        const ch = buf.getChannelData(0);
+        for(let i=0;i<len;i++){ ch[i] = Math.random()*2 - 1; }
+        this._noise = buf; return buf;
+      }
+    }
+
+    // --- Pads configuration ---
+    const pads = [
+      { id:'kick',      name:'Kick',       type:'بيس درم',     key:'A', action:(s)=>s.kick(),                      color:'#5eead4' },
+      { id:'snare',     name:'Snare',      type:'سنير',        key:'S', action:(s)=>s.snare(),                     color:'#a78bfa' },
+      { id:'hihat-c',   name:'Hi‑Hat C',   type:'هات مغلق',    key:'D', action:(s)=>s.hatClosed(),                 color:'#60a5fa' },
+      { id:'hihat-o',   name:'Hi‑Hat O',   type:'هات مفتوح',    key:'F', action:(s)=>s.hatOpen(),                   color:'#f472b6' },
+      { id:'tom-low',   name:'Tom Low',    type:'توم منخفض',    key:'G', action:(s)=>s.tom(120),                   color:'#f59e0b' },
+      { id:'tom-mid',   name:'Tom Mid',    type:'توم متوسط',    key:'H', action:(s)=>s.tom(170),                   color:'#34d399' },
+      { id:'clap',      name:'Clap',       type:'كْلاب',       key:'J', action:(s)=>s.clap(),                      color:'#f43f5e' },
+      { id:'rim',       name:'Rim',        type:'ريم شوت',     key:'K', action:(s)=>s.rim(),                       color:'#38bdf8' },
+      { id:'cowbell',   name:'Cowbell',    type:'كو بيل',      key:'L', action:(s)=>s.cowbell(),                   color:'#84cc16' },
+      { id:'tom-hi',    name:'Tom High',   type:'توم حاد',     key:';', action:(s)=>s.tom(220),                   color:'#22d3ee' },
+      { id:'extra1',    name:'Hat Tip',    type:'تفصيل',       key:"'", action:(s)=>s.hatClosed(),                 color:'#8b5cf6' },
+      { id:'extra2',    name:'Snap',       type:'فرقعة',       key:'P', action:(s)=>s.rim(),                       color:'#06b6d4' },
+    ];
+
+    // Build UI grid
+    const grid = $('#padGrid');
+    const keyMap = $('#keyMap');
+    const synth = new DrumSynth();
+
+    pads.forEach(p => {
+      const el = document.createElement('button');
+      el.className = 'pad'; el.role='listitem'; el.dataset.id = p.id; el.dataset.key = p.key;
+      el.innerHTML = `
+        <div class="key">${p.key}</div>
+        <div class="label">${p.name}</div>
+        <div class="type">${p.type}</div>
+        <div class="meter"><span></span></div>
+        <div class="glow" style="background: radial-gradient(450px 250px at 70% -10%, ${hexToRgba(p.color, .22)}, transparent 60%), radial-gradient(300px 200px at -10% 110%, ${hexToRgba('#ffffff', .08)}, transparent 50%)"></div>
+      `;
+      el.addEventListener('pointerdown', (e)=>{ triggerPad(p.id); });
+      el.addEventListener('keydown', e => { if(e.code==='Space' || e.key==='Enter'){ e.preventDefault(); triggerPad(p.id);} });
+      grid.appendChild(el);
+
+      const chip = document.createElement('span');
+      chip.className='chip'; chip.textContent = `${p.name}: ${p.key}`;
+      keyMap.appendChild(chip);
+    });
+
+    function hexToRgba(hex, a){
+      const n = parseInt(hex.slice(1), 16);
+      const r = (n>>16)&255, g=(n>>8)&255, b=n&255;
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+    // Visual feedback
+    function flashPad(id){
+      const el = grid.querySelector(`[data-id="${id}"]`);
+      if(!el) return;
+      el.classList.add('active');
+      const meter = el.querySelector('.meter > span');
+      meter.style.width = '100%';
+      setTimeout(()=>{ el.classList.remove('active'); meter.style.width = '0%'; }, 120);
+    }
+
+    // Map keys to pads
+    const keyToPad = {}; pads.forEach(p=> keyToPad[p.key.toLowerCase()] = p.id);
+
+    // Recording state
+    let isRecording = false, isPlaying = false, startTime = 0;
+    let events = []; // {time, id}
+    let playTimers = [];
+
+    const liveDot = $('#liveDot');
+    const statusText = $('#statusText');
+    const hitCount = $('#hitCount');
+    const recDuration = $('#recDuration');
+
+    function setStatus(text, live=false){
+      statusText.textContent = text;
+      liveDot.classList.toggle('live', live);
+    }
+
+    function triggerPad(id){
+      // Resume audio context if needed
+      synth.ensure();
+      const pad = pads.find(p=>p.id===id); if(!pad) return;
+      pad.action(synth);
+      flashPad(id);
+      if(isRecording){
+        const t = performance.now() - startTime;
+        events.push({time:t, id});
+        hitCount.textContent = events.length;
+        recDuration.textContent = (t/1000).toFixed(2) + 's';
+      }
+    }
+
+    // Global keyboard handler
+    window.addEventListener('keydown', e =>{
+      const k = e.key.toLowerCase();
+      if(k in keyToPad){ triggerPad(keyToPad[k]); return; }
+
+      if(k==='r'){ toggleRecord(); }
+      else if(e.code==='Space'){ e.preventDefault(); play(); }
+      else if(e.key==='Escape'){ stopAll(); }
+    });
+
+    // Controls
+    $('#btnRecord').addEventListener('click', toggleRecord);
+    $('#btnPlay').addEventListener('click', play);
+    $('#btnStop').addEventListener('click', stopAll);
+    $('#btnClear').addEventListener('click', ()=>{ if(!isPlaying){ events = []; hitCount.textContent='0'; recDuration.textContent='0.00s'; setStatus('تم المسح'); }});
+
+    $('#volume').addEventListener('input', e=>{ synth.currentVolume = parseFloat(e.target.value); synth.setVolume(synth.currentVolume); });
+    $('#speed').addEventListener('input', e=>{ /* handled at playback */ });
+
+    function toggleRecord(){
+      if(isPlaying) return; // ignore during playback
+      if(!isRecording){
+        isRecording = true; events = []; startTime = performance.now();
+        setStatus('🔴 يجري التسجيل…', true);
+      } else {
+        isRecording = false; const dur = performance.now() - startTime;
+        setStatus(`تم إيقاف التسجيل — ${events.length} ضربة / ${(dur/1000).toFixed(2)}s`);
+      }
+    }
+
+    function play(){
+      if(isRecording || events.length===0 || isPlaying) return;
+      isPlaying = true; setStatus('▶ التشغيل...', true);
+      const speed = parseFloat($('#speed').value) || 1;
+      const first = events[0].time; // normalize
+      const total = (events[events.length-1].time - first) / speed;
+
+      events.forEach(ev => {
+        const t = (ev.time - first) / speed;
+        const h = setTimeout(()=>{ triggerPad(ev.id); }, t);
+        playTimers.push(h);
+      });
+      // stop flag after total
+      const endTimer = setTimeout(()=>{ isPlaying=false; setStatus('انتهى التشغيل'); playTimers=[]; }, total + 10);
+      playTimers.push(endTimer);
+    }
+
+    function stopAll(){
+      if(isRecording){ isRecording=false; setStatus('تم إيقاف التسجيل'); }
+      if(isPlaying){
+        playTimers.forEach(t=>clearTimeout(t)); playTimers=[]; isPlaying=false; setStatus('تم الإيقاف');
+      }
+    }
+
+    // Accessibility: focus ring via keyboard only
+    let mouseDown = false; window.addEventListener('mousedown', ()=>mouseDown=true); window.addEventListener('mouseup', ()=>mouseDown=false);
+    document.addEventListener('focusin', e=>{ if(mouseDown && e.target.classList.contains('pad')) e.target.blur(); });
+
+    // Wake hint on first interaction
+    document.addEventListener('pointerdown', ()=>{
+      try{ synth.ensure(); }catch{}
+    }, { once:true });
+  </script>
+</body>
+</html>
